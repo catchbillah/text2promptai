@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Prompt Generator</title>
+    <style>
+        :root {
+            --bg-primary: #222;
+            --bg-secondary: #333;
+            --bg-tertiary: #444;
+            --text-primary: #eee;
+            --text-secondary: #ccc;
+            --accent-primary: #7d5fff;
+            --accent-secondary: #5e45cc;
+            --error-color: #ff5252;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 700px;
+            margin: 20px auto;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            padding: 25px;
+            background: var(--bg-secondary);
+            border: 1px solid #555;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--accent-secondary);
+            padding-bottom: 10px;
+        }
+
+        label {
+            font-weight: 500;
+            display: block;
+            margin-top: 12px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(125, 95, 255, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn {
+            background: var(--accent-primary);
+            color: white;
+            flex: 2;
+        }
+
+        .reset-btn {
+            background: var(--error-color);
+            color: white;
+            flex: 1;
+        }
+
+        .copy-btn {
+            background: var(--success-color);
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .apply-btn {
+            background: var(--warning-color);
+            color: white;
+            width: auto;
+        }
+
+        .api-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(125, 95, 255, 0.1);
+            border-radius: 5px;
+            border: 1px solid var(--accent-secondary);
+        }
+
+        .api-container label {
+            margin-top: 0;
+        }
+
+        .api-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .api-input-group input {
+            flex: 3;
+            margin-bottom: 0;
+        }
+
+        .api-input-group button {
+            flex: 1;
+            margin-top: 5px;
+        }
+
+        .output {
+            margin-top: 25px;
+            padding: 15px;
+            background: var(--bg-tertiary);
+            border-radius: 5px;
+            border: 1px solid #555;
+        }
+
+        .output h3 {
+            margin-top: 0;
+            color: var(--accent-primary);
+        }
+
+        textarea#generatedPrompt {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Status Message */
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+
+        .status-success {
+            background-color: rgba(76, 175, 80, 0.2);
+            border: 1px solid var(--success-color);
+        }
+
+        .status-error {
+            background-color: rgba(255, 82, 82, 0.2);
+            border: 1px solid var(--error-color);
+        }
+
+        /* Toggles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        .toggle-label {
+            margin: 0 0 0 10px;
+            display: inline;
+        }
+
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Loading spinner */
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .generate-container {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>AI Image Prompt Generator</h2>
+
+        <div class="api-container">
+            <label>Enter Gemini 1.5 API Key:</label>
+            <div class="api-input-group">
+                <input type="text" id="apiKey" placeholder="Your Gemini API Key">
+                <button class="apply-btn" onclick="applyApiKey()">Apply</button>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <label>Basic Idea or Concept:</label>
+        <input type="text" id="concept" placeholder="e.g., a dragon in a cyberpunk city or 'a boy bangladesi 20 years'" required>
+
+        <div class="toggle-container">
+            <label class="toggle">
+                <input type="checkbox" id="narrativeToggle" checked>
+                <span class="slider"></span>
+            </label>
+            <label class="toggle-label">Expand Basic Prompt Into Narrative</label>
+        </div>
+
+        <label>Style:</label>
+        <select id="style">
+            <option value="">None</option>
+            <option>Photorealistic</option>
+            <option>Abstract</option>
+            <option>Minimalist</option>
+            <option>Cartoon</option>
+            <option>2d Line Art</option>
+            <option>3d Render</option>
+            <option>Illustration</option>
+            <option>Hand Drawn</option>
+            <option>Hand Drawn Line Art</option>
+            <option>Impressionist</option>
+            <option>Expressionist</option>
+            <option>Pop Art</option>
+            <option>Realism</option>
+            <option>Surrealism</option>
+            <option>Concept Art</option>
+            <option>Fantasy</option>
+            <option>Sci-Fi</option>
+            <option>Horror</option>
+            <option>Steampunk</option>
+            <option>Cyberpunk</option>
+            <option>Art Nouveau</option>
+            <option>Art Deco</option>
+            <option>Modern</option>
+            <option>Traditional</option>
+            <option>Monochrome</option>
+            <option>Colorful</option>
+            <option>Black & White</option>
+            <option>Vector Art</option>
+            <option>Watercolor</option>
+            <option>Cinematic</option>
+            <option>Pixel Art</option>
+            <option>Anime</option>
+            <option>Manga</option>
+            <option>Realistic</option>
+            <option>Stylized</option>
+        </select>
+
+        <label>Mood:</label>
+        <select id="mood">
+            <option value="">None</option>
+            <option>Epic</option>
+            <option>Dramatic</option>
+            <option>Calm</option>
+            <option>Dark</option>
+            <option>Whimsical</option>
+            <option>Mysterious</option>
+            <option>Magical</option>
+            <option>Intense</option>
+            <option>Peaceful</option>
+            <option>Happy</option>
+            <option>Sad</option>
+            <option>Angry</option>
+            <option>Hopeful</option>
+            <option>Lonely</option>
+            <option>Exciting</option>
+            <option>Scary</option>
+            <option>Creepy</option>
+            <option>Relaxing</option>
+            <option>Uplifting</option>
+            <option>Enchanting</option>
+            <option>Charming</option>
+            <option>Cozy</option>
+            <option>Industrial</option>
+            <option>Peaceful</option>
+            <option>Chaotic</option>
+            <option>Busy</option>
+        </select>
+
+        <label>Lighting:</label>
+        <select id="lighting">
+            <option value="">None</option>
+            <option>Natural</option>
+            <option>Studio</option>
+            <option>Moody</option>
+            <option>Sunset</option>
+            <option>Neon Glow</option>
+            <option>Soft Diffused</option>
+        </select>
+
+        <label>Perspective:</label>
+        <select id="perspective">
+            <option value="">None</option>
+            <option>Wide-angle</option>
+            <option>Close-up</option>
+            <option>Over-the-shoulder</option>
+            <option>Top-down</option>
+            <option>Bird's Eye View</option>
+            <option>First-person POV</option>
+            <option>Third-person POV</option>
+            <option>Isometric</option>
+            <option>Orthographic</option>
+            <option>Forced Perspective</option>
+            <option>Low-angle</option>
+            <option>High-angle</option>
+            <option>Split-level</option>
+            <option>360-degree</option>
+            <option>Flat Lay</option>
+            <option>Slanted</option>
+            <option>Vertical</option>
+            <option>Horizontal</option>
+            <option>Diagonal</option>
+            <option>Curved</option>
+            <option>Rectilinear</option>
+            <option>Fisheye</option>
+            <option>Telephoto</option>
+            <option>Macro</option>
+            <option>Micro</option>
+        </select>
+
+        <label>Time of Day:</label>
+        <select id="timeOfDay">
+            <option value="">None</option>
+            <option>Morning</option>
+            <option>Noon</option>
+            <option>Sunset</option>
+            <option>Midnight</option>
+            <option>Blue Hour</option>
+            <option>Golden Hour</option>
+            <option>Twilight</option>
+            <option>Daytime</option>
+            <option>Nighttime</option>
+            <option>Afternoon</option>
+            <option>Evening</option>
+            <option>Dawn</option>
+            <option>Dusk</option>
+            <option>Midday</option>
+            <option>Early Morning</option>
+            <option>Late Night</option>
+            <option>Early Evening</option>
+            <option>Late Afternoon</option>
+            <option>Early Afternoon</option>
+            <option>Late Morning</option>
+            <option>Early Night</option>
+            <option>Late Morning</option>
+            <option>Late Evening</option>
+        </select>
+
+        <label>Weather:</label>
+        <select id="weather">
+            <option value="">None</option>
+            <option>Clear</option>
+            <option>Rainy</option>
+            <option>Foggy</option>
+            <option>Snowy</option>
+            <option>Stormy</option>
+            <option>Overcast</option>
+            <option>Cloudy</option>
+            <option>Sunny</option>
+            <option>Windy</option>
+            <option>Misty</option>
+            <option>Hazy</option>
+            <option>Humid</option>
+            <option>Blizzard</option>
+            <option>Thunderstorm</option>
+            <option>Drizzle</option>
+            <option>Downpour</option>
+            <option>Light Rain</option>
+            <option>Heavy Rain</option>
+            <option>Light Snow</option>
+            <option>Heavy Snow</option>
+            <option>Lightning</option>
+            <option>Ice Storm</option>
+            <option>Hailstorm</option>
+            <option>Sleet</option>
+            <option>Freezing Rain</option>
+            <option>Wet Snow</option>
+            <option>Slush</option>
+            <option>Black Ice</option>
+            <option>Heatwave</option>
+            <option>Coldwave</option>
+            <option>Heat Lightning</option>
+            <option>Heat Haze</option>
+            <option>Heat Index</option>
+            <option>Heat Stroke</option>
+            <option>Heat Exhaustion</option>
+        </select>
+
+        <label>Negative Prompt (things to avoid):</label>
+        <input type="text" id="negativePrompt" placeholder="e.g., blur, noise, distortion">
+
+        <div class="button-group">
+            <div class="generate-container">
+                <button class="generate-btn" onclick="generatePrompt()">Generate Prompt</button>
+                <div id="loader" class="loader"></div>
+            </div>
+            <button class="reset-btn" onclick="resetForm()">Reset</button>
+        </div>
+
+        <div class="output">
+            <h3>Generated Prompt:</h3>
+            <textarea id="generatedPrompt" rows="4" readonly></textarea>
+            <button class="copy-btn" onclick="copyPrompt()">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        let geminiApiKey = "";
+        
+        // Predefined narrative expansions for common patterns
+        const narrativeExpansions = {
+            // Age, nationality, gender patterns
+            "boy": "young male character with hopes and dreams",
+            "girl": "young female character with aspirations and determination",
+            "man": "adult male with life experience and perspective",
+            "woman": "adult female with depth and character",
+            "child": "innocent young person discovering the world",
+            "teen": "adolescent navigating the challenges of youth",
+            "elderly": "person with wisdom gained from decades of experience",
+            "bangladesi": "from Bangladesh with cultural heritage and traditions",
+            "american": "from the United States with distinctive cultural background",
+            "japanese": "from Japan with connection to Japanese traditions and aesthetics",
+            "indian": "from India with rich cultural traditions and heritage",
+            "african": "from Africa with connection to ancestral traditions",
+            "european": "from Europe with continental cultural influences",
+            "asian": "from Asia with connection to Asian cultural elements",
+            "middle eastern": "from the Middle East with cultural depth and heritage"
+        };
+
+        // Common locations to use in expansions
+        const locations = {
+            "bangladesi": "Dhaka",
+            "american": "New York",
+            "japanese": "Tokyo",
+            "indian": "Mumbai",
+            "african": "Nairobi",
+            "european": "Paris",
+            "asian": "Singapore",
+            "middle eastern": "Dubai"
+        };
+
+        // Common activities and struggles by age
+        const ageThemes = {
+            "child": ["playing", "learning", "discovering nature", "making friends"],
+            "teen": ["studying", "dealing with peer pressure", "first love", "finding identity"],
+            "20": ["university studies", "career beginnings", "independence", "relationships"],
+            "30": ["career development", "family planning", "achieving goals", "life balance"],
+            "40": ["midlife reflections", "career expertise", "family responsibilities", "personal growth"],
+            "50": ["mentorship", "legacy planning", "wisdom sharing", "life satisfaction"],
+            "elderly": ["passing wisdom", "reflecting on life", "enjoying simple pleasures", "connection with younger generations"]
+        };
+
+        // Common narrative elements to add depth
+        const narrativeElements = [
+            "facing a difficult decision",
+            "pursuing a dream against the odds",
+            "seeking connection in a disconnected world",
+            "balancing tradition and modernity",
+            "discovering hidden talents",
+            "overcoming personal challenges",
+            "finding beauty in everyday moments",
+            "reconnecting with heritage",
+            "navigating cultural expectations",
+            "passionate about music",
+            "skilled in traditional crafts",
+            "dedicated to helping others",
+            "balancing family expectations with personal dreams"
+        ];
+
+        function showStatus(message, isError = false) {
+            const statusEl = document.getElementById("statusMessage");
+            statusEl.textContent = message;
+            statusEl.className = isError 
+                ? "status-message status-error" 
+                : "status-message status-success";
+            statusEl.style.display = "block";
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                statusEl.style.display = "none";
+            }, 3000);
+        }
+
+        function applyApiKey() {
+            geminiApiKey = document.getElementById("apiKey").value.trim();
+            if (geminiApiKey) {
+                showStatus("API Key Applied Successfully!");
+            } else {
+                showStatus("Please enter a valid API key.", true);
+            }
+        }
+
+        function expandNarrativeLocally(concept) {
+            // Parse the basic input
+            const words = concept.toLowerCase().split(/\s+/);
+            let age = null;
+            let nationality = null;
+            let gender = null;
+            let narrative = "";
+            
+            // Extract age, nationality, gender from input
+            for (const word of words) {
+                // Check if word is a number (age)
+                if (/^\d+$/.test(word)) {
+                    age = parseInt(word);
+                }
+                // Check for nationality
+                for (const [key, value] of Object.entries(narrativeExpansions)) {
+                    if (word.includes(key) && key.length > 3) { // Avoid matching short substrings
+                        if (key === "boy" || key === "girl" || key === "man" || key === "woman" || key === "child" || key === "teen" || key === "elderly") {
+                            gender = key;
+                        } else {
+                            nationality = key;
+                        }
+                    }
+                }
+            }
+            
+            // Start building the narrative
+            if (gender || nationality || age) {
+                // Begin with age and nationality if available
+                const parts = [];
+                
+                if (age) {
+                    parts.push(`${age}-year-old`);
+                }
+                
+                if (nationality) {
+                    parts.push(nationality);
+                }
+                
+                if (gender) {
+                    parts.push(gender);
+                }
+                
+                narrative = parts.join(" ");
+                
+                // Add location if nationality is known
+                if (nationality && locations[nationality]) {
+                    narrative += ` in ${locations[nationality]}`;
+                }
+                
+                // Add an activity or theme based on age
+                let ageKey = age ? age.toString() : gender;
+                // Find the closest age category
+                if (age) {
+                    if (age < 18) ageKey = "teen";
+                    else if (age < 25) ageKey = "20";
+                    else if (age < 35) ageKey = "30";
+                    else if (age < 45) ageKey = "40";
+                    else if (age < 60) ageKey = "50";
+                    else ageKey = "elderly";
+                }
+                
+                // Add a random narrative element for depth
+                if (ageThemes[ageKey]) {
+                    const randomActivity = ageThemes[ageKey][Math.floor(Math.random() * ageThemes[ageKey].length)];
+                    const randomElement = narrativeElements[Math.floor(Math.random() * narrativeElements.length)];
+                    narrative += `, ${randomActivity} but ${randomElement}`;
+                } else {
+                    // Fallback if no specific age theme is found
+                    const randomElement = narrativeElements[Math.floor(Math.random() * narrativeElements.length)];
+                    narrative += `, ${randomElement}`;
+                }
+            } else {
+                // If we can't extract structured information, return the original
+                return concept;
+            }
+            
+            return narrative.charAt(0).toUpperCase() + narrative.slice(1);
+        }
+
+        async function generatePrompt() {
+            const loader = document.getElementById("loader");
+            loader.style.display = "block";
+            
+            try {
+                const concept = document.getElementById("concept").value.trim();
+                const style = document.getElementById("style").value;
+                const mood = document.getElementById("mood").value;
+                const lighting = document.getElementById("lighting").value;
+                const perspective = document.getElementById("perspective").value;
+                const timeOfDay = document.getElementById("timeOfDay").value;
+                const weather = document.getElementById("weather").value;
+                const negativePrompt = document.getElementById("negativePrompt").value.trim();
+                const narrativeEnabled = document.getElementById("narrativeToggle").checked;
+
+                if (!concept) {
+                    showStatus("Please enter a concept!", true);
+                    loader.style.display = "none";
+                    return;
+                }
+
+                // Process the concept - expand if toggle is on
+                let processedConcept = concept;
+                if (narrativeEnabled) {
+                    processedConcept = expandNarrativeLocally(concept);
+                }
+
+                // Build the prompt with the processed concept
+                let promptParts = [processedConcept];
+                if (style) promptParts.push(`in a ${style} style`);
+                if (mood) promptParts.push(`${mood} mood`);
+                if (lighting) promptParts.push(`${lighting} lighting`);
+                if (perspective) promptParts.push(`captured from a ${perspective} perspective`);
+                if (timeOfDay) promptParts.push(`set in ${timeOfDay}`);
+                if (weather) promptParts.push(`with ${weather} weather`);
+                
+                let basePrompt = promptParts.join(", ");
+                
+                // Add negative prompt as a separate paragraph if exists
+                let fullPrompt = basePrompt;
+                if (negativePrompt) {
+                    fullPrompt += "\n\nAvoid: " + negativePrompt;
+                }
+
+                // Set the basic prompt for now
+                document.getElementById("generatedPrompt").value = fullPrompt;
+
+                // If API key is provided, try to enhance the prompt
+                if (geminiApiKey) {
+                    try {
+                        showStatus("Generating enhanced prompt...");
+                        
+                        // Create instructions for Gemini 1.5
+                        const instructions = `
+                            You are an AI image prompt expert. Take the following basic prompt and enhance it to create a detailed, vivid image generation prompt. 
+                            Keep the enhanced prompt concise but descriptive. Include all the elements from the original prompt.
+                            Make sure to preserve the style, mood, lighting, perspective, time of day, and weather elements.
+                            
+                            Basic prompt: ${basePrompt}
+                            ${negativePrompt ? 'Negative prompt (things to avoid): ' + negativePrompt : ''}
+                        `;
+
+                        // Updated API endpoint for Gemini 1.5
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                contents: [
+                                    {
+                                        parts: [
+                                            { text: instructions }
+                                        ]
+                                    }
+                                ],
+                                generation_config: {
+                                    temperature: 0.7,
+                                    max_output_tokens: 800,
+                                    top_p: 0.95,
+                                    top_k: 40
+                                }
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.candidates && data.candidates.length > 0 && 
+                            data.candidates[0].content && 
+                            data.candidates[0].content.parts && 
+                            data.candidates[0].content.parts.length > 0) {
+                            
+                            const enhancedPrompt = data.candidates[0].content.parts[0].text.trim();
+                            document.getElementById("generatedPrompt").value = enhancedPrompt;
+                            showStatus("Enhanced prompt generated!");
+                        } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+                            // Handle content filtering blocks
+                            showStatus(`API blocked request: ${data.promptFeedback.blockReason}. Using basic prompt.`, true);
+                        } else {
+                            // Log the error response for debugging
+                            console.error("API response:", data);
+                            showStatus("Invalid API response. Using basic prompt.", true);
+                        }
+                    } catch (error) {
+                        console.error("Error connecting to Gemini API:", error);
+                        showStatus("Failed to connect to Gemini API. Using basic prompt.", true);
+                    }
+                }
+            } finally {
+                loader.style.display = "none";
+            }
+        }
+
+        function resetForm() {
+            document.querySelectorAll("input:not(#apiKey), select, textarea").forEach(field => field.value = "");
+            document.getElementById("generatedPrompt").value = "";
+            showStatus("Form reset");
+        }
+
+        function copyPrompt() {
+            const promptField = document.getElementById("generatedPrompt");
+            promptField.select();
+            document.execCommand("copy");
+            showStatus("Prompt copied to clipboard!");
+        }
+    </script>
+</body>
+</html>
